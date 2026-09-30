@@ -6,16 +6,33 @@ class Snake:
         # body is a list of (x, y) grid-cell positions, head is body[0]
         self.body = [(x, y), (x - 1, y), (x - 2, y)]
         self.direction = (1, 0)  # moving right
+        # Direction the snake actually travelled on its most recent move.
+        # Reversal checks must be made against this, not against the
+        # direction most recently requested by a key press.
+        self.last_move_direction = self.direction
+        # Buffered turns, applied one per move so that quick double turns
+        # (e.g. Up then Left) each take effect on consecutive moves.
+        self.direction_queue = []
         self.grow_pending = False
 
     def set_direction(self, dx, dy):
-        # NOTE: does not currently guard against reversing directly
-        # into the segment behind the head.
-        self.direction = (dx, dy)
+        # Validate against the last *queued* turn if there is one, otherwise
+        # against the direction of the last actual move. Reversals and
+        # no-op repeats are ignored instead of killing the snake.
+        reference = self.direction_queue[-1] if self.direction_queue else self.last_move_direction
+        if (dx, dy) == reference:
+            return
+        if (dx, dy) == (-reference[0], -reference[1]):
+            return
+        if len(self.direction_queue) < 2:
+            self.direction_queue.append((dx, dy))
 
     def move(self):
+        if self.direction_queue:
+            self.direction = self.direction_queue.pop(0)
         head_x, head_y = self.body[0]
         dx, dy = self.direction
+        self.last_move_direction = self.direction
         new_head = (head_x + dx, head_y + dy)
 
         self.body.insert(0, new_head)
